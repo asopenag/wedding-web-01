@@ -13,7 +13,7 @@
     "English:en"
   ],
   "theme": {
-    "bodyFont": "Quicksand",
+    "bodyFont": "Lato",
     "headingFont": "Lato",
     "accentColor": "#2e7d32",
     "borderRadius": "1",
