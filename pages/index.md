@@ -3,55 +3,22 @@ title: Santi y Pilar
 image: /media/church-2530017_1280.webp
 sections:
   - _block: text
-    title: Crea tu propia web parroquial
+    title: ¡¡NOS CASAMOS!!
     html: >-
-      ### **¡Lleva tu parroquia al siguiente nivel digital!**
+      ### Estamos felices y muy ilusionados, pero todavía lo estaremos más si
+      podemos contar contigo el 17 de Mayo de 2025
 
 
-      Hoy en día, tener una presencia online no es un lujo, ¡es una necesidad! Y
-      no te preocupes, no tienes que ser un experto en tecnología para hacer que
-      tu parroquia brille en la web. Nosotros nos encargamos de la parte técnica
-      para que tú puedas concentrarte en lo que realmente importa: la comunidad.
+      Sabemos que aún quedan meses para la fecha, pero tenemos muchas ganas y
+      todavía hay mucho que organizar. Lo más importante de todo: si te hemos
+      mandado ya este enlace es porque eres imprescindible para nosotros y no
+      queremos disfrutar de ese día sin ti.
 
 
-      **¿Por qué tener una web para tu parroquia?**  
-
-      Una página web no solo es una tarjeta de presentación digital, ¡es un
-      centro de conexión para tus feligreses! Aquí tienes algunas razones por
-      las que es indispensable:
+      ¡Guárdate la fecha!
 
 
-      *   **Conéctate con todos**: Los feligreses siempre tendrán acceso a la
-      información más actualizada, desde horarios de misas hasta eventos
-      especiales.
-          
-      *   **Notificaciones al instante**: ¡Nada de olvidos! Las notificaciones
-      automáticas te permiten enviar recordatorios de eventos, misas y
-      actividades directamente a los móviles de la comunidad.
-          
-      *   **Accesibilidad desde cualquier lugar**: La web funciona como una app
-      en los teléfonos, ¡y va contigo a todas partes!
-          
-
-      ### **Tu contenido, tu estilo, tu comunidad**
-
-
-      Nosotros te damos la libertad de elegir qué mostrar en tu web, y lo
-      hacemos fácil y rápido. Además, personalizamos todo para que tu página
-      tenga el estilo único de tu parroquia.
-
-
-      ### **Todo lo que necesitas, sin complicaciones**
-
-
-      El objetivo es que puedas gestionar todo tú mismo de forma sencilla. Nada
-      de complicados paneles de control ni tecnología que te haga sentir como si
-      estuvieras programando un cohete. Nuestra plataforma es fácil, intuitiva,
-      ¡y con la garantía de que siempre te ayudamos en lo que necesites!
-
-
-      Así que, si quieres que tu parroquia esté conectada, visible y activa en
-      el mundo digital, ¡estamos aquí para ayudarte! Da el paso sin miedo.
+      Sábado 17 de Mayo de 2025 a las 13:30h.
   - _block: gallery
     title: Añade una galería de imágenes
     list:
