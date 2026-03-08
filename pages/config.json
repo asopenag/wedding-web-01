@@ -1,21 +1,20 @@
 {
   "title": "Nombre parroquias",
   "description": "Descripción del sitio",
-  "image": "",
-  "icon": "",
-  "social": ["https://www.youtube.com/@seminariopamplona"],
-  "bank": [
-    {
-      "title": "Dono a mi Iglesia",
-      "account": "https://www.donoamiiglesia.es"
-    }
+  "social": [
+    "https://www.youtube.com/@seminariopamplona"
   ],
   "siteurl": "https://parroquia.app",
-  "languages": ["Español:es", "Català:ca", "Galego:gl", "Euskara:eu", "English:en"],
-  "nav": [],
+  "languages": [
+    "Español:es",
+    "Català:ca",
+    "Galego:gl",
+    "Euskara:eu",
+    "English:en"
+  ],
   "theme": {
     "bodyFont": "Quicksand",
-    "headingFont": "Story Script",
+    "headingFont": "Lato",
     "accentColor": "#2e7d32",
     "borderRadius": "1",
     "borderWidth": "1.25",
