@@ -1,6 +1,6 @@
 ---
 title: Santi y Pilar
-image: /media/church-2530017_1280.webp
+image: /media/IMG_1720.jpeg
 sections:
   - _block: text
     title: ¡¡NOS CASAMOS!!
