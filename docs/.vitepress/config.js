@@ -33,6 +33,6 @@ export default defineConfig(async () => {
     async transformHead({ pageData }) {
       return events2JSONLD(pageData.frontmatter.events);
     },
-    plugins: [tailwindcss()],
+    vite: { plugins: [tailwindcss()] },
   };
 });
