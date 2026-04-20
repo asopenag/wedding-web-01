@@ -21,7 +21,7 @@ const repository = process.env.GITHUB_REPOSITORY;
 sh(`git config user.name "github-actions[bot]"`);
 sh(`git config user.email "github-actions[bot]@users.noreply.github.com"`);
 
-const TEMPLATE_URL = "https://github.com/catholicweb/web-template.git";
+const TEMPLATE_URL = "https://github.com/catholicweb/subtree.git";
 const SUBTREE_PREFIX = "docs/.vitepress";
 const ROOT_MIRROR = `${SUBTREE_PREFIX}/_root`;
 
@@ -29,12 +29,6 @@ export function fetchUpstream() {
   if (schedule !== "0 3 * * *" && eventName !== "workflow_dispatch") {
     return console.log("Not the right time to fetch...", schedule, eventName);
   }
-
-  // web-template is the source of the subtree — it does not pull from itself
-  if (repository === "catholicweb/web-template") {
-    return console.log("Running in web-template (source repo), skipping upstream pull.");
-  }
-
   console.log("Syncing template via git subtree...");
 
   sh(`git remote add template ${TEMPLATE_URL} || true`);
