@@ -44,8 +44,9 @@ export function fetchUpstream() {
     console.log("First run: initializing subtree...");
     // Remove .vitepress from the git index (keep working-tree files intact)
     // so git subtree add can take ownership of the prefix.
-    sh(`git rm -r --cached ${SUBTREE_PREFIX}/ || true`);
-    sh(`git commit -m "chore: untrack .vitepress for subtree migration" || true`);
+    sh(`git rm -r --cached ${SUBTREE_PREFIX}/`);
+    sh(`git rm -r ${SUBTREE_PREFIX}/`);  // remove from disk too
+    sh(`git commit -m "chore: untrack .vitepress for subtree migration"`);
     sh(`git subtree add --prefix=${SUBTREE_PREFIX} template main --squash -m "chore: initialize template subtree"`);
   } else {
     sh(`git subtree pull --prefix=${SUBTREE_PREFIX} template main --squash -m "Sync template" || true`);
