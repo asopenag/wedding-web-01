@@ -1,10 +1,10 @@
 <template>
-  <footer class="border-t border-gray-700 pt-8 pb-4" :class="navStyle == '47herri' ? '[&_*]:text-white bg-[#222831] pt-4' : 'bg-gray-100'">
+  <footer class="border-t border-gray-700 pt-8 mt-16 pb-4" :class="navStyle == '47herri' ? '[&_*]:text-white bg-[#222831] pt-4' : 'bg-gray-100'">
     <div class="container mx-auto px-4">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center mb-8">
         <!-- Contact Section -->
         <div>
-          <h5 class="text-xl font-semibold mb-3">Contacto</h5>
+          <h3 class="text-xl font-semibold mb-3">Contacto</h3>
           <div class="flex flex-col space-y-2 items-center">
             <template v-for="(collab, index) in config.collaborators">
               <a v-if="collab.phonenumber" :href="`tel:+34${collab.phonenumber.replace(/\s/g, '')}`" class="flex items-center transition-colors">
@@ -26,7 +26,7 @@
 
         <!-- Description Section -->
         <div>
-          <h5 class="text-xl font-semibold mb-3">{{ config.title }}</h5>
+          <h3 class="text-xl font-semibold mb-3">{{ config.title }}</h3>
           <p class="mb-2">{{ config.description }}</p>
           <div class="flex gap-4 items-center mx-auto items-center justify-center">
             <template v-for="(href, index) in config.social">
@@ -46,7 +46,7 @@
 
               <a v-else-if="href.includes('twitter')" target="_blank" rel="noopener noreferrer" aria-label="Check our Twitter/X" :href="href" class="inline-block hover:text-gray-700 transition-colors">
                 <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126h3.117z" />
                 </svg>
               </a>
 
@@ -58,7 +58,7 @@
 
               <a v-else-if="href.includes('twitch')" target="_blank" rel="noopener noreferrer" aria-label="Check our twitch" :href="href" class="inline-block hover:text-purple-500 transition-colors">
                 <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z" />
+                  <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h3.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z" />
                 </svg>
               </a>
 
@@ -77,7 +77,7 @@
 
         <!-- Financial Support Section -->
         <div>
-          <h5 class="text-xl font-semibold mb-3">Ayuda económica</h5>
+          <h3 class="text-xl font-semibold mb-3">Ayuda económica</h3>
           <div class="space-y-1">
             <template v-for="(bank, index) in config.bank">
               <p v-if="bank.account.includes('https://')">
@@ -91,10 +91,23 @@
         </div>
       </div>
 
+      <div v-if="$frontmatter.faq" class="mx-auto pt-6 text-xs" :class="grid({ tags: ['small'] })">
+        <h3 class="text-xl font-semibold mb-3 sr-only">FAQ</h3>
+        <details v-for="(item, index) in $frontmatter.faq" :key="index" class="group cursor-pointer items-center">
+          <summary class="list-none font-medium text-gray-500 hover:text-accent transition-colors">
+            {{ item.title }}
+          </summary>
+
+          <p class="mt-2 italic text-gray-400">
+            {{ item.text }}
+          </p>
+        </details>
+      </div>
+
       <!-- Footer Info -->
-      <div class="mt-4 pt-4 text-center text-gray-800">
-        <p class="text-sm">
-          <em> &copy; {{ new Date().getFullYear() }} <a href="https://parroquia.app" class="hover:text-accent transition-colors">parroquia.app </a> — <a href="/aviso-legal-y-politica-de-privacidad" class="hover:text-accent transition-colors"> Aviso Legal </a> — <a href="/aviso-legal-y-politica-de-privacidad" class="hover:text-accent transition-colors"> Política privacidad </a></em>
+      <div class="text-center text-gray-800">
+        <p class="text-xs">
+          <em> &copy; {{ new Date().getFullYear() }} <a href="https://parroquia.app" class="hover:text-accent transition-colors">parroquia.app </a> — <a href="/aviso-legal-y-politica-de-privacidad" class="hover:text-accent transition-colors"> Aviso Legal y Privacidad</a></em>
         </p>
       </div>
     </div>
@@ -105,6 +118,12 @@
 import { ref } from "vue";
 import { useData } from "vitepress";
 const { theme } = useData();
+import { grid } from "./../../utils.js";
 const config = ref(theme.value.config || {});
 const navStyle = ref(theme.value?.config?.theme?.navStyle);
 </script>
+<style>
+summary::-webkit-details-marker {
+  display: none;
+}
+</style>

@@ -37,7 +37,6 @@ watch(mapContainer, (newVal) => {
 const allMaps = ref([]);
 
 async function loadMap() {
-  console.log("loadMap");
   if (!mapContainer.value) return;
 
   // 1. Dynamically import Leaflet and its CSS
@@ -76,11 +75,9 @@ async function loadMap() {
   markersLayer = L.layerGroup().addTo(map);
 
   renderMarkers(page.value.frontmatter.lang);
-  console.log("finished loading");
 }
 
 function renderMarkers(lang) {
-  console.log("renderMarkers");
   if (!markersLayer) return;
 
   // Create a smaller icon
@@ -100,14 +97,33 @@ function renderMarkers(lang) {
     .forEach((m) => {
       const g = m.geo.split(",").map((s) => Number(s.trim()));
 
+      const googleUrl = `https://www.google.com/maps/dir/?api=1&destination=${m.geo}`;
+
+      let wazeUrl = `https://waze.com/ul?ll=${m.geo}&navigate=yes`;
+      if (/Android/i.test(navigator.userAgent)) {
+        const fallback = encodeURIComponent(`https://waze.com/ul?ll=${m.geo}&navigate=yes`);
+        wazeUrl = `intent://waze.com/ul?ll=${m.geo}&navigate=yes#Intent;package=com.waze;scheme=https;S.browser_fallback_url=${fallback};end;`;
+      }
+
       const html = `
-        <a href="${m.url}">
-          <h3 class="text-xl font-bold text-center text-accent">${m.name} (${m.title})</h3>
-          <div style="background:white">
-            <img src="${m.image}" style="width:100%;aspect-ratio:16/9;object-fit:cover" />
-          </div>
+    <h3 class="text-center m-0 text-lg font-bold text-accent">
+      ${m.name} (${m.title})
+    </h3>
+    <div class="relative overflow-hidden">
+      <a href="${m.url}" class="block">
+        <img src="${m.image}" class="w-full aspect-video object-cover block" />
+      </a>
+      
+      <div class="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-3 bg-white px-3 py-2 rounded-full">
+        <a href="${googleUrl}" target="_blank" rel="noopener">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/a/aa/Google_Maps_icon_%282020%29.svg" crossorigin="anonymous" loading="lazy" class="w-5 h-5" alt="Google Navigation" />
         </a>
-      `;
+        <div class="w-[1px] h-4 bg-gray-300 self-center"></div>
+        <a href="${wazeUrl}" target="_blank" rel="noopener">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/8/8b/Tabler-icons_brand-waze.svg" crossorigin="anonymous" loading="lazy" class="w-5 h-5" alt="Waze Navigation" />
+        </a>
+      </div>
+    </div>`;
 
       const marker = L.marker(g, { icon: smallIcon }).bindPopup(html).addTo(markersLayer);
 

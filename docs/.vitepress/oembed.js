@@ -49,6 +49,20 @@ export async function getPreview(url) {
   try {
     if (url.endsWith(".md")) {
       return await localLinks(url);
+    } else if (url.includes("sallebarne.eus")) {
+
+      const html = await (await fetch('https://sallebarne.eus', { cache: 'no-cache' })).text();
+      const match = html.match(/sallebarne\.eus\/wp-content\/uploads\/([^-]+?)-([^\.]+?)\.jpg/);
+
+      if (!match) throw new Error("sallebarne.eus: no image match found");
+      console.log(url, match[1])
+      return {
+        type: "link",
+        src: `https://sallebarne.eus/wp-content/uploads/${match[1]}.mp3`,
+        title: `Egunez egun ${match[1]?.split('/')[2]?.split('.').toReversed().join('-') || ''}`,
+        image: `https://sallebarne.eus/wp-content/uploads/${match[1]}-${match[2]}.jpg`,
+        aspect: round(16 / 9),
+      };
     } else {
       return await getOEmbed(url);
     }

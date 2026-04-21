@@ -8,7 +8,7 @@
     <main class="flex-1 flex flex-wrap" v-if="$frontmatter.sections">
       <template v-for="(section, index) in $frontmatter.sections">
         <section :class="getSectionClasses(section.tags)" v-if="!section.tags?.includes('hidden')">
-          <div v-if="section.title && section._block != 'hero'" class="text-center mt-8 mb-4 container mx-auto">
+          <div v-if="section.title && section._block != 'hero'" class="text-center mt-12 mb-4 container mx-auto">
             <h2 :id="slugify(section.title)" class="text-4xl font-bold">{{ section.title }}</h2>
           </div>
           <component :key="slugify(section.title)" :is="getBlockComponent(section._block)" :block="section" />
@@ -19,8 +19,8 @@
     <!-- Footer Component -->
     <component :is="components.Footer" />
 
-    <!-- PWA Component -->
-    <component :is="components.PWA" />
+    <!-- PWA Component (client-only: uses navigator/serviceWorker) -->
+    <ClientOnly><component :is="components.PWA" /></ClientOnly>
   </div>
 </template>
 

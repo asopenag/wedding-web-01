@@ -1,7 +1,6 @@
-// dataExporter.js
 import ICAL from "ical.js";
 import { read, write } from "./node_utils.js";
-const config = read("./pages/config.json");
+import { formatWeekdays } from "./utils.js";
 
 function exportCalendar(events) {
   // TODO: export also as ICS
@@ -53,17 +52,41 @@ function getNextOccurrence(event, relativeTo = ICAL.Time.now()) {
 
   // 3. Skip all occurrences that happened before "relativeTo"
   let next;
+  let iterCount = 0;
   while ((next = iterator.next())) {
     if (next.compare(relativeTo) >= 0) {
       return parseDateToISO(next.toJSDate().toLocaleDateString("es-ES")); // This is the first occurrence in the future
     }
 
-    // Safety break: Prevent infinite loops on poorly formed rules
-    // (Optional: stop after 1000 iterations or a specific end date)
-    if (iterator.last && iterator.last.year > relativeTo.year + 10) break;
+    // Safety break: Prevent slow/infinite loops on poorly formed rules
+    if (++iterCount > 1000 || (iterator.last && iterator.last.year > relativeTo.year + 10)) break;
   }
 
   return null; // No future occurrences found
+}
+
+function splitRRuleByDay(byDayArray) {
+  const simpleByDay = [];
+  const simpleByWeek = [];
+
+  byDayArray.forEach((item) => {
+    // Regex logic:
+    // ^(-?\d+)? matches an optional positive or negative number at the start
+    // ([A-Z]{2})$ matches exactly two uppercase letters at the end
+    const match = item.match(/^(-?\d+)?([A-Z]{2})$/);
+
+    if (match) {
+      const weekNum = match[1]; // e.g., "3", "-1", or undefined
+      const dayAbbr = match[2]; // e.g., "SA", "SU"
+
+      simpleByDay.push(dayAbbr);
+
+      // If no number is present (like "SU"), we'll store an empty string or null
+      simpleByWeek.push(weekNum ? `WEEK${weekNum}` : "");
+    }
+  });
+
+  return { simpleByDay: formatWeekdays(simpleByDay), simpleByWeek };
 }
 
 function getTime(t) {
@@ -91,11 +114,11 @@ function intersectOptions(options, field) {
   const validSet = new Set(validValues[field]);
   let valid = options.filter((opt) => validSet.has(opt));
 
-  if (field == "BYDAY") {
+  /*if (field == "BYDAY") {
     const weekMatch = options.join(",").match(/WEEK(\d+)/);
     if (!weekMatch) return valid;
     return valid.map((opt) => weekMatch[1] + opt);
-  }
+  }*/
   if (field == "FREQ" && !valid.length) {
     const weekMatch = options.join(",").match(/WEEK(\d+)/);
     if (weekMatch) return ["MONTHLY"];
@@ -149,7 +172,7 @@ export async function fetchCalendar() {
           //rrule: toArray(e.rrule).map((r) => r.toUpperCase()),
           images: toArray(e.image || input.default?.[type]?.image),
           byday: intersectOptions(toArray(e.rrule), "BYDAY"),
-          //byweek: intersectOptions(toArray(e.rrule), "BYWEEK"),
+          byweek: intersectOptions(toArray(e.rrule), "BYWEEK"),
           //freq: intersectOptions(toArray(e.rrule), "FREQ"),
           notes: toArray(e.notes || input.default?.[type]?.description),
           language: e.language || null,
@@ -219,87 +242,8 @@ export async function fetchCalendar() {
   function comp(a, b, key, def = "000") {
     return (a[key]?.[0]?.padStart(3, "0") || def).localeCompare(b[key]?.[0]?.padStart(3, "0") || def);
   }
-  const sorted = events.toSorted((a, b) => comp(a, b, "dates") || comp(a, b, "times") || comp(a, b, "byday") || comp(a, b, "title"));
+  const sorted = events.toSorted((a, b) => comp(a, b, "dates") || comp(a, b, "times") || comp(a, b, "byweek") || comp(a, b, "byday") || comp(a, b, "title"));
   exportCalendar(sorted);
   console.log("Events parsed ", sorted?.length);
   return sorted;
-}
-
-export function events2JSONLD(events) {
-  if (!events || !Array.isArray(events)) return [];
-
-  const dayMap = {
-    SU: "Sunday",
-    MO: "Monday",
-    TU: "Tuesday",
-    WE: "Wednesday",
-    TH: "Thursday",
-    FR: "Friday",
-    SA: "Saturday",
-  };
-
-  const eventNodes = events.map((event) => {
-    // Definición base del nodo del evento
-    const node = {
-      "@type": "Event",
-      name: event.title,
-      description: event.notes?.join(". ") || `Evento en ${event.locations?.[0]}`,
-      image: event.images?.map((img) => (img.startsWith("http") ? img : `${config?.dev?.siteurl || ""}${img}`)),
-      eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
-      eventStatus: "https://schema.org/EventScheduled",
-      location: {
-        "@type": "Place",
-        name: event.locations?.[0] || "Ubicación por confirmar",
-        address: {
-          "@type": "PostalAddress",
-          addressLocality: event.locations?.[0],
-          addressCountry: "ES",
-        },
-      },
-    };
-
-    // CASO 1: Evento con fecha específica (Prioridad)
-    if (event.dates && event.dates.length > 0) {
-      // Tomamos la primera fecha y la combinamos con la primera hora
-      const date = event.dates[0];
-      const time = event.times?.[0] || "00:00";
-      node.startDate = `${date}T${time.replace(".", ":")}:00`;
-      // Nota: No añadimos eventSchedule aquí para evitar confusiones a Google
-    }
-    // CASO 2: Evento recurrente (Sin fechas específicas, pero con byday)
-    else if (event.byday && event.byday.length > 0) {
-      let byDayValue = event.byday[0];
-      let weekNumber = null;
-
-      // Manejo de recurrencias tipo 1SU, 2MO
-      if (/^\d/.test(byDayValue)) {
-        weekNumber = byDayValue[0];
-        byDayValue = byDayValue.substring(1);
-      }
-
-      node.eventSchedule = {
-        "@type": "Schedule",
-        byDay: `https://schema.org/${dayMap[byDayValue]}`,
-        startTime: event.times?.[0]?.replace(".", ":"),
-        repeatFrequency: weekNumber ? "Monthly" : "Weekly",
-      };
-
-      if (weekNumber) {
-        node.eventSchedule.repeatDay = weekNumber;
-      }
-    }
-
-    return node;
-  });
-
-  return [
-    [
-      "script",
-      { type: "application/ld+json" },
-      JSON.stringify({
-        "@context": "https://schema.org",
-        "@graph": eventNodes,
-      }),
-    ],
-  ];
 }

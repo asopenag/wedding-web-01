@@ -1,25 +1,81 @@
 import { read, write, fg, fs, path } from "./node_utils.js";
-import { slugify, applyComplexFilter, groupEvents } from "./utils.js";
+import { slugify, applyComplexFilter, groupEvents, getAddress } from "./utils.js";
 import { getPreview } from "./oembed.js";
 import { fetchVideos } from "./youtube.js";
-import { buildDictionary, translateObject, translateValue } from "./translate.js";
+import { buildDictionary, translateObject, translateValue, dictionary as DICTIONARY } from "./translate.js";
 import { createImages } from "./images.js";
 import { fetchUpstream, commit } from "./git.js";
-import { getBibleReadings } from "./gospel.js";
+import { getBibleReadings, getAudio } from "./gospel.js";
 import { printCSS } from "./css.js";
+import { getEventFAQ } from "./seo.js";
 import { fetchCalendar } from "./calendar.js";
 import { sendNotifications } from "./notify.js";
+import crypto from "crypto";
 
 import MarkdownIt from "markdown-it";
 import sharp from "sharp";
-
-const DICTIONARY = read("./docs/public/dictionary.json");
 
 const config = read("./pages/config.json");
 // Lista de lenguas a generar
 const TARGET_LANGS = config.languages?.length ? config.languages : ["Español:es"];
 
 const md = new MarkdownIt({ html: true, linkify: true, breaks: true });
+
+const CACHE_FILE = "./.buildtimecache.json";
+const CACHE_DATA = read(CACHE_FILE);
+const originalFetch = globalThis.fetch;
+
+globalThis.fetch = async (url, options = {}) => {
+  try {
+    // Solo cacheamos GETs
+    if ( options.cache == 'no-cache' || (options.method && options.method !== "GET")) {
+      return originalFetch(url, options);
+    }
+
+    const urlStr = url.toString();
+    const safeKey = crypto.createHash("sha256").update(urlStr).digest("hex");
+
+    // 0. Aplicamos network first
+    if (!url?.includes("nominatim.openstreetmap.org") && !url?.includes("https://47herri.eus/bible")) {
+      const response = await originalFetch(url, options);
+
+      if (response.ok) {
+        // 3. Actualizamos el archivo maestro
+        try {
+          const clone = response.clone();
+          CACHE_DATA[safeKey] = await clone.json();
+          write(CACHE_FILE, CACHE_DATA);
+        } catch (_) { /* non-JSON response — skip caching */ }
+        return response;
+      }
+    }
+
+    // 1. ¿Está en la caché?
+    if (CACHE_DATA[safeKey]) {
+      console.log(`[Cache Hit]: ${safeKey}`);
+      return new Response(JSON.stringify(CACHE_DATA[safeKey]), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // 2. Si no está, hacemos el fetch real
+    const response = await originalFetch(url, options);
+
+    if (response.ok) {
+      // 3. Actualizamos el archivo maestro
+      try {
+        const clone = response.clone();
+        CACHE_DATA[safeKey] = await clone.json();
+        write(CACHE_FILE, CACHE_DATA);
+      } catch (_) { /* non-JSON response — skip caching */ }
+    }
+
+    return response;
+  } catch (e) {
+    return new Response("{}", { status: 400, headers: { "Content-Type": "application/json" } });
+  }
+};
 
 async function createManifest() {
   try {
@@ -54,7 +110,7 @@ async function createManifest() {
     // generate the favicon
 
     await sharp("./docs/public" + config.icon)
-      .resize(64, 64) // Resize to 32x32 pixels for the favicon size
+      .resize(32, 32) // Resize to 32x32 pixels for the favicon size
       .toFile(`./docs/public/favicon.ico`);
   } catch (e) {
     console.log(e, "failed to createManifest");
@@ -95,6 +151,14 @@ async function postComplete(fm) {
         return elem;
       });
     }
+
+    if (fm.sections[i]._block == "video-gospel") {
+      const { audios, books } = await getAudio(fm.lang);
+      fm.sections[i].filters = books;
+      fm.sections[i].query = false;
+      fm.sections[i].elements = audios;
+      (fm.sections[i].tags ??= []).push("horizontal");
+    }
     if (fm.sections[i]._block == "video-channel") {
       fm.sections[i].elements = videos
         .filter((obj) =>
@@ -112,7 +176,7 @@ async function postComplete(fm) {
       // TODO: Decide if we want the videos to be added here or on the Video.vue component (not on both...)
 
       if (fm.sections[i].filters?.length) {
-        (fm.sections[i].tags ??= []).push("vertical", "small");
+        //(fm.sections[i].tags ??= []).push("vertical", "small");
       } else {
         (fm.sections[i].tags ??= []).push("horizontal", "medium");
       }
@@ -120,6 +184,10 @@ async function postComplete(fm) {
       fm.sections[i].events = groupEvents(fm.sections[i].events, fm.sections[i].order);
     } else if (fm.sections[i]._block == "gospel") {
       fm.sections[i].gospel = await getBibleReadings({ lang: getCode(fm.lang), date: new Date(), gospelOnly: !fm.sections[i].readings });
+    }
+
+    if (fm.events) {
+      fm.faq = getEventFAQ(fm.events, fm.lang);
     }
   }
 }
@@ -148,10 +216,16 @@ async function autocomplete(fm) {
     } else if (fm.sections[i]._block == "calendar") {
       fm.sections[i].events = calendar.filter((obj) => applyComplexFilter(obj, fm.sections[i].filter));
       if (!fm.sections[i].events?.length) (fm.sections[i].tags ??= []).push("hidden");
+    } else if (fm.sections[i]._block == "map") {
+      const [latitude, longitude] = fm.sections[i].geo?.split(",").map((s) => Number(s.trim())) || [];
+      const extra = await getAddress(latitude, longitude, fm.sections[i].name);
+      fm.sections[i] = { ...extra, ...fm.sections[i] };
     }
+
     if (config.theme.navStyle == "47herri") {
       let filter = fm.source == "./pages/index.md" ? "byday:empty" : fm.title;
       fm.events = calendar.filter((obj) => applyComplexFilter(obj, filter));
+      fm.faq = getEventFAQ(fm.events);
     }
   }
   // remove hidden sections

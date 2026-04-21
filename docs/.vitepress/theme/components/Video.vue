@@ -3,11 +3,20 @@
     <LazyItem :key="item.src" :alwaysVisible="index < 5">
       <div class="relative">
         <div v-if="playingVideo === item.src" class="w-full h-full items-center rounded-lg overflow-hidden cursor-pointer aspect-[16/9]">
-          <iframe :src="item.src" data-testid="embed-iframe" width="100%" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" class="w-full h-full rounded-lg overflow-hidden"></iframe>
+          <div v-if="isAudio(item.src)" class="w-full text-center flex flex-col items-center justify-center h-full bg-black">
+            <img :src="item.image" :alt="`Thumbnail for ${item.title}`" :fetchpriority="block.index >= 1 ? 'low' : 'high'" :loading="block.index >= 1 ? 'lazy' : 'eager'" @error.once="$event.target.crossOrigin = 'anonymous'; $event.target.src = item.image" class="absolute inset-0 w-full h-full object-cover rounded-lg opacity-20" />
+            <h3 class="text-2xl font-bold text-white mb-4 w-full px-4">{{ item.title }}</h3>
+
+            <audio controls autoplay class="w-full h-10 px-2">
+              <source :src="item.src" type="audio/mpeg" />
+            </audio>
+          </div>
+
+          <iframe v-else :src="item.src" data-testid="embed-iframe" width="100%" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" class="w-full h-full rounded-lg overflow-hidden"></iframe>
         </div>
 
         <div v-else @click="playingVideo = item.src" class="w-full h-full relative facade rounded-lg overflow-hidden cursor-pointer aspect-[16/9]">
-          <img :src="item.image" :alt="`Thumbnail for ${item.title}`" :fetchpriority="block.index >= 1 ? 'low' : 'high'" :loading="block.index >= 1 ? 'lazy' : 'eager'" crossorigin="anonymous" class="absolute inset-0 w-full h-full object-cover rounded-lg" />
+          <img :src="item.image" :alt="`Thumbnail for ${item.title}`" :fetchpriority="block.index >= 1 ? 'low' : 'high'" :loading="block.index >= 1 ? 'lazy' : 'eager'" @error.once="$event.target.crossOrigin = 'anonymous'; $event.target.src = item.image" class="absolute inset-0 w-full h-full object-cover rounded-lg" />
 
           <div class="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 text-center to-transparent flex items-end">
             <h3 class="text-lg font-bold text-white mb-2 w-full px-4">{{ item.title }}</h3>
@@ -27,20 +36,41 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, watch } from "vue";
 import LazyItem from "./LazyItem.vue";
 import Grid from "./Grid.vue";
 import { formatDate } from "./../../utils.js";
 const props = defineProps({ block: { type: Object, required: true } });
 
+const isAudio = (url) => {
+  if (!url) return false;
+  return url.toLowerCase().includes(".mp3");
+};
+
 function logo(item) {
   if (item.src.includes("youtube")) return "youtube-logo";
   if (item.src.includes("spotify")) return "spotify-logo";
   if (item.src.includes("videmo")) return "vimeo-logo";
+  if (item.src.includes(".mp3")) return "audio-logo";
   return "generic-logo";
 }
 
 const playingVideo = ref(null);
+
+watch(playingVideo, (src) => {
+  if (!src) return;
+  const item = props.block.elements?.find((i) => i.src === src);
+  const platform = src.includes("youtube") ? "youtube"
+    : src.includes("spotify") ? "spotify"
+    : src.includes("vimeo") ? "vimeo"
+    : src.includes(".mp3") ? "audio"
+    : "video";
+  window.goatcounter?.count({
+    path: `Reproducir: ${(item?.title || src).slice(0, 60)}`,
+    title: props.block.title +' @'+ platform,
+    event: true,
+  });
+});
 </script>
 
 <style>
@@ -61,7 +91,6 @@ const playingVideo = ref(null);
 
 .generic-logo {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='white' d='M8 5v14l11-7z'/%3E%3C/svg%3E");
-  background-color: rgba(0, 0, 0, 0.2);
 }
 
 .spotify-logo {
@@ -70,6 +99,10 @@ const playingVideo = ref(null);
 
 .vimeo-logo {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 168 168'%3E%3Cpath d='M0 48.3c0-1.6 0.4-2.7 1.2-3.5s1.9-1.2 3.4-1.2h13.2c1.6 0 2.7 0.4 3.4 1.2 0.8 0.8 1.2 1.9 1.2 3.5v71.5c0 1.6-0.4 2.7-1.2 3.5-0.8 0.8-1.9 1.2-3.4 1.2H4.6c-1.6 0-2.7-0.4-3.4-1.2-0.8-0.8-1.2-1.9-1.2-3.5V48.3zM39.7 48.3h16.4c1.6 0 2.7 0.4 3.4 1.2 0.8 0.8 1.2 1.9 1.2 3.5v71.5c0 1.6-0.4 2.7-1.2 3.5-0.8 0.8-1.9 1.2-3.4 1.2H39.7c-1.6 0-2.7-0.4-3.4-1.2-0.8-0.8-1.2-1.9-1.2-3.5V48.3zM72.4 57.2h16.3c1.6 0 2.7 0.4 3.4 1.2 0.8 0.8 1.2 1.9 1.2 3.5v9.3c0 1.6-0.4 2.7-1.2 3.5-0.8 0.8-1.9 1.2-3.4 1.2H72.4c-1.6 0-2.7-0.4-3.4-1.2-0.8-0.8-1.2-1.9-1.2-3.5v-9.3c0-1.6 0.4-2.7 1.2-3.5 0.8-0.8 1.9-1.2 3.4-1.2zM72.4 72.3h16.3v-5.8H72.4v5.8zM118.2 48.3h16.4c1.6 0 2.7 0.4 3.4 1.2 0.8 0.8 1.2 1.9 1.2 3.5v71.5c0 1.6-0.4 2.7-1.2 3.5-0.8 0.8-1.9 1.2-3.4 1.2h-16.4c-1.6 0-2.7-0.4-3.4-1.2-0.8-0.8-1.2-1.9-1.2-3.5V48.3z' fill='%23fff'/%3E%3C/svg%3E");
+}
+
+.audio-logo {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='white' d='M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z'/%3E%3C/svg%3E");
 }
 
 .hidescrollbar::-webkit-scrollbar {

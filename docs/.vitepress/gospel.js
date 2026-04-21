@@ -1,3 +1,47 @@
+const shortenBibleName = (name) => {
+  return name
+    // 1. Replace the long ordinals with numbers
+    .replace(/Primera carta/gi, '1 ')
+    .replace(/Segunda carta/gi, '2 ')
+    .replace(/Tercera carta/gi, '3 ')
+    .replace(/Carta/gi, ' ')
+    
+    // 2. Remove common formal prefixes and "San/Santa"
+    .replace(/Evangelio según/gi, '')
+    .replace(/Hechos de los Apóstoles/gi, 'Hechos')
+    .replace(/de San Pablo a los|de San Pablo a|a los| de |Pablo a los|Pablo a|Pablo|/gi, '')
+    .replace(/SAN /gi, '')
+    
+    // 3. Clean up extra spaces and fix the casing (CORINTIOS -> Corintios)
+    .trim()
+    .toLowerCase()
+    .replace(/(^|\s)\S/g, (match) => match.toUpperCase());
+};
+
+export async function getAudio(lang) {
+  const bibles = {
+    eu: "https://live.bible.is/api/bibles/filesets/EUSEABN1DA",
+    es: "https://live.bible.is/api/bibles/filesets/SPNDHHN2DA",
+    en: "https://live.bible.is/api/bibles/filesets/ENGNIVP2DV",
+  };
+  const code = lang.split(":").toReversed()[0];
+
+  const res = await fetch(bibles[code] || bibles.eu);
+  const { data } = await res.json();
+
+  const audios = data.map((b) => {
+    return {
+      title: `${shortenBibleName(b.book_name)} ${b.chapter_start}`,
+      src: b.path,
+      image: "/fcbh-logo-square-512.png",
+    };
+  });
+
+  const books = [...new Set(data.map((b) => shortenBibleName(b.book_name)).filter(Boolean))];
+
+  return { audios, books };
+}
+
 const formatDate = (date) => date.toISOString().split("T")[0];
 
 const cleanTitle = (str = "") => str.replace("de la ", "").replace("semana de", "de");

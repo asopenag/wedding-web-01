@@ -50,16 +50,14 @@ export function accessMultikey(obj, multikey) {
 
       let value = toArray(obj[mainKey]);
       if (mainKey == "weekday") value = weekday(obj.byday);
-      if (mainKey == "byday") value = splitRRuleByDay(obj.byday).simpleByDay;
-      if (mainKey == "byweek") value = splitRRuleByDay(obj.byday).simpleByWeek;
+      if (mainKey == "byday") value = formatWeekdays(obj.byday);
 
       if (value.length > 0) {
         // If there are subtraction keys, filter the current values
         for (const subKey of keysToSubtract) {
           let subtractValues = toArray(obj[subKey]);
           if (subKey == "weekday") subtractValues = weekday(obj.byday);
-          if (subKey == "byday") subtractValues = splitRRuleByDay(obj.byday).simpleByDay;
-          if (subKey == "byweek") subtractValues = splitRRuleByDay(obj.byday).simpleByWeek;
+          if (subKey == "byday") subtractValues = formatWeekdays(obj.byday);
           if (!subtractValues.length) subtractValues = [subKey];
           value = value.filter((val) => !subtractValues.includes(val));
         }
@@ -102,7 +100,7 @@ export function applyComplexFilter(obj, filter) {
   });
 }
 
-function formatWeekdays(days) {
+export function formatWeekdays(days) {
   // 1. Define the reference order
   const order = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"];
 
@@ -122,33 +120,7 @@ function formatWeekdays(days) {
   return sortedDays;
 }
 
-export function splitRRuleByDay(byDayArray) {
-  const simpleByDay = [];
-  const simpleByWeek = [];
-
-  byDayArray.forEach((item) => {
-    // Regex logic:
-    // ^(-?\d+)? matches an optional positive or negative number at the start
-    // ([A-Z]{2})$ matches exactly two uppercase letters at the end
-    const match = item.match(/^(-?\d+)?([A-Z]{2})$/);
-
-    if (match) {
-      const weekNum = match[1]; // e.g., "3", "-1", or undefined
-      const dayAbbr = match[2]; // e.g., "SA", "SU"
-
-      simpleByDay.push(dayAbbr);
-
-      // If no number is present (like "SU"), we'll store an empty string or null
-      simpleByWeek.push(weekNum ? `WEEK${weekNum}` : "");
-    }
-  });
-
-  return { simpleByDay: formatWeekdays(simpleByDay), simpleByWeek };
-}
-
 function weekday(days) {
-  days = splitRRuleByDay(days).simpleByDay;
-
   const w = [];
   if (days.join(",").match(/mo|tu|we|th|fr/i)) w.push("MO,TU,WE,TH,FR");
   if (days.join(",").toLowerCase().includes("sa")) w.push("SA");
@@ -190,11 +162,11 @@ function tr(str, lang = "Español:es") {
   const langCode = lang.split(":")[1];
   const map = {
     eu: {
-      mo: "Astelehena",
-      tu: "Asteartea",
-      we: "Asteazkena",
-      th: "Osteguna",
-      fr: "Ostirala",
+      mo: "Astelehenetan",
+      tu: "Asteartetan",
+      we: "Asteazkenetan",
+      th: "Ostegunetan",
+      fr: "Ostiraletan",
       sa: "Larunbatetan",
       su: "Igandetan",
       "mo,tu,we,th,fr": "Astelehenetik ostiralera",
@@ -213,8 +185,8 @@ function tr(str, lang = "Español:es") {
       we: "Miércoles",
       th: "Jueves",
       fr: "Viernes",
-      sa: "Sábado",
-      su: "Domingo",
+      sa: "Sábados",
+      su: "Domingos",
       "mo,tu,we,th,fr": "Lunes a viernes",
       yearly: "Anualmente",
       monthly: "Mensualmente",
@@ -417,7 +389,7 @@ export function grid(section) {
   // 1. Layout Base
   const base = "container mx-auto flex";
   const directions = {
-    horizontal: "flex-nowrap overflow-x-scroll *:flex-shrink-0 hidescrollbar",
+    horizontal: "flex-nowrap overflow-x-scroll *:flex-shrink-0 hidescrollbar pr-8",
     vertical: "flex-wrap justify-center text-center",
   };
   const sizes = {
@@ -433,4 +405,39 @@ export function grid(section) {
   const activeDirection = Object.keys(directions).find((s) => tags.includes(s)) || "vertical";
 
   return `${base} ${directions[activeDirection]} ${sizes[activeSize]}`;
+}
+
+export async function getAddress(lat, lng, name, zoom = 17) {
+  if (!lat || !lng) return {};
+  let extra = {
+    google: `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`,
+    //google: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}&query_place_id=${lat},${lng}`,
+    osm: `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=${zoom}/${lat}/${lng}`,
+  };
+
+  // IMPORTANT: Nominatim requires a custom User-Agent to identify your app
+  const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": "ParroquiaApp-Project-Manager (email@parroquia.app)",
+      },
+    });
+    const data = await response.json();
+    return {
+      ...extra,
+      street: data.address.road || data.address.pedestrian,
+      city: data.address.hamlet || data.address.village || data.address.town || data.address.city,
+      zip: data.address.postcode,
+      full: data.display_name,
+      region: data.address.state,
+      country: data.address.country,
+      country_code: data.address.country_code,
+      name: data.address.amenity,
+    };
+  } catch (error) {
+    console.error("Lookup failed:", error);
+    return extra;
+  }
 }
